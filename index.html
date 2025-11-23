@@ -3,34 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Crypto Price Tracker</title>
+    <title>Futures Trading Crypto Analysis</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>💰 Live Crypto Prices</h1>
-            <p>Track real-time cryptocurrency market data</p>
+        <header class="header">
+            <h1><i class="fas fa-chart-line"></i> Futures Trading Analysis</h1>
+            <p>Advanced Crypto Futures Analysis with AI Predictions</p>
         </header>
 
         <div class="controls">
-            <button id="loadTopCoins">📊 Load Top Cryptocurrencies</button>
+            <div class="control-group">
+                <button id="loadBitgetCoins" class="btn primary">
+                    <i class="fas fa-sync-alt"></i> Load Bitget Futures Coins
+                </button>
+                <button id="analyzePump" class="btn success">
+                    <i class="fas fa-rocket"></i> Next Potential Pump Coins
+                </button>
+            </div>
+            
             <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Search by name or symbol (e.g., bitcoin or btc)">
-                <button id="searchBtn">🔍 Search</button>
+                <input type="text" id="searchInput" placeholder="Search coin (e.g., BTC, ETH, SOL)">
+                <button id="searchBtn" class="btn info">
+                    <i class="fas fa-search"></i> Search
+                </button>
             </div>
         </div>
 
-        <div class="loading hidden" id="loadingIndicator">
-            <p>Loading data...</p>
+        <div class="trading-setup">
+            <h3><i class="fas fa-cog"></i> Trading Setup</h3>
+            <div class="setup-grid">
+                <div class="setup-item">
+                    <label>Entry Price ($)</label>
+                    <input type="number" id="entryPrice" placeholder="0.00" step="0.0001">
+                </div>
+                <div class="setup-item">
+                    <label>Take Profit ($)</label>
+                    <input type="number" id="takeProfit" placeholder="0.00" step="0.0001">
+                </div>
+                <div class="setup-item">
+                    <label>Stop Loss ($)</label>
+                    <input type="number" id="stopLoss" placeholder="0.00" step="0.0001">
+                </div>
+                <div class="setup-item">
+                    <label>Leverage</label>
+                    <select id="leverage">
+                        <option value="1">1x</option>
+                        <option value="5">5x</option>
+                        <option value="10" selected>10x</option>
+                        <option value="20">20x</option>
+                        <option value="50">50x</option>
+                    </select>
+                </div>
+            </div>
         </div>
 
-        <div id="resultsSection">
-            <div class="coin-grid" id="coinsGrid">
-                <!-- Coin cards will be inserted here by JavaScript -->
+        <div class="stats-overview">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-fire"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="activeCoins">0</h3>
+                    <p>Active Futures</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-arrow-up"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="pumpCoins">0</h3>
+                    <p>Potential Pumps</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-exchange-alt"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="totalCoins">0</h3>
+                    <p>Total Coins</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading hidden" id="loading">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Loading futures data...</span>
+        </div>
+
+        <div class="error hidden" id="error">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span id="errorMessage"></span>
+        </div>
+
+        <div class="coins-section">
+            <div class="section-header">
+                <h2><i class="fas fa-coins"></i> Futures Coins Analysis</h2>
+                <div class="filters">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="pump">Potential Pump</button>
+                    <button class="filter-btn" data-filter="high-volume">High Volume</button>
+                </div>
+            </div>
+            
+            <div class="coins-grid" id="coinsGrid">
+                <!-- Coin cards will be dynamically inserted here -->
+            </div>
+        </div>
+
+        <div class="ai-analysis hidden" id="aiAnalysis">
+            <h2><i class="fas fa-brain"></i> AI Trading Analysis</h2>
+            <div class="analysis-content" id="analysisContent">
+                <!-- AI analysis will be inserted here -->
             </div>
         </div>
     </div>
+
     <script src="script.js"></script>
 </body>
 </html>
