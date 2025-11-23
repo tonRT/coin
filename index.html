@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Crypto Price Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💰 Live Crypto Prices</h1>
+            <p>Track real-time cryptocurrency market data</p>
+        </header>
+
+        <div class="controls">
+            <button id="loadTopCoins">📊 Load Top Cryptocurrencies</button>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search by name or symbol (e.g., bitcoin or btc)">
+                <button id="searchBtn">🔍 Search</button>
+            </div>
+        </div>
+
+        <div class="loading hidden" id="loadingIndicator">
+            <p>Loading data...</p>
+        </div>
+
+        <div id="resultsSection">
+            <div class="coin-grid" id="coinsGrid">
+                <!-- Coin cards will be inserted here by JavaScript -->
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
