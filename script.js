@@ -1,526 +1,348 @@
-// Configuration
-const CONFIG = {
-    TELEGRAM_BOT_TOKEN: '8221231743:AAGW30HpqUPaf656q60mmboQQ-x2NnLHub8',
-    TELEGRAM_CHAT_ID: '7417215529', // You need to set this
-    UPDATE_INTERVAL: 7000, // 7 seconds
-    BITGET_COINS: [
-        'BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'AVAX', 'DOT', 'LINK', 'MATIC',
-        'DOGE', 'LTC', 'ATOM', 'ETC', 'XLM', 'FIL', 'APT', 'ARB', 'NEAR', 'OP'
-    ]
+// API Configuration
+const API_CONFIG = {
+    gecko: {
+        name: 'CoinGecko',
+        baseURL: 'https://api.coingecko.com/api/v3',
+        endpoints: {
+            prices: '/simple/price',
+            top: '/coins/markets',
+            search: '/search',
+            coin: '/coins/'
+        }
+    },
+    freecrypto: {
+        name: 'Free CryptoAPI',
+        baseURL: 'https://api.freecryptoapi.com/v1',
+        endpoints: {
+            getData: '/getData',
+            getTop: '/getTop'
+        }
+    },
+    cmc: {
+        name: 'CoinMarketCap',
+        baseURL: 'https://pro-api.coinmarketcap.com/v1',
+        endpoints: {
+            listings: '/cryptocurrency/listings/latest',
+            quotes: '/cryptocurrency/quotes/latest'
+        },
+        apiKey: 'YOUR_CMC_API_KEY' // You need to get this from CoinMarketCap
+    }
 };
 
 // Global State
 let state = {
-    isBotRunning: false,
+    currentAPI: 'gecko',
     coinsData: [],
-    analysisInterval: null,
-    telegramAlerts: new Set(),
-    chart: null
+    updateInterval: null
 };
 
 // DOM Elements
 const elements = {
-    startBot: document.getElementById('startBot'),
-    stopBot: document.getElementById('stopBot'),
-    botStatus: document.getElementById('botStatus'),
-    telegramStatus: document.getElementById('telegramStatus'),
-    marketStatus: document.getElementById('marketStatus'),
-    totalCoins: document.getElementById('totalCoins'),
-    activeSignals: document.getElementById('activeSignals'),
-    marketSentiment: document.getElementById('marketSentiment'),
-    topPumps: document.getElementById('topPumps'),
-    topDumps: document.getElementById('topDumps'),
-    analysisGrid: document.getElementById('analysisGrid'),
-    activityLog: document.getElementById('activityLog'),
-    loadingOverlay: document.getElementById('loadingOverlay'),
-    priceChart: document.getElementById('priceChart')
+    searchInput: document.getElementById('searchInput'),
+    searchBtn: document.getElementById('searchBtn'),
+    searchType: document.getElementsByName('searchType'),
+    pricesGrid: document.getElementById('pricesGrid'),
+    coinDetails: document.getElementById('coinDetails'),
+    momentumSignals: document.getElementById('momentumSignals'),
+    refreshPrices: document.getElementById('refreshPrices'),
+    loading: document.getElementById('loading'),
+    apiStatus: document.getElementById('apiStatus')
 };
 
 // Initialize Application
-class CryptoTrader {
+class CryptoDashboard {
     constructor() {
         this.init();
     }
 
     init() {
         this.bindEvents();
-        this.loadInitialData();
-        this.initializeChart();
-        this.logActivity('System initialized. Ready to start trading bot.');
+        this.loadTopPrices();
+        this.startAutoRefresh();
+        this.testAPIs();
     }
 
     bindEvents() {
-        elements.startBot.addEventListener('click', () => this.startBot());
-        elements.stopBot.addEventListener('click', () => this.stopBot());
-        document.getElementById('refreshAnalysis').addEventListener('click', () => this.refreshAnalysis());
-        document.getElementById('timeFrame').addEventListener('change', (e) => this.updateTimeFrame(e.target.value));
+        elements.searchBtn.addEventListener('click', () => this.searchCoin());
+        elements.searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.searchCoin();
+        });
+        
+        elements.searchType.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                state.currentAPI = e.target.value;
+                this.loadTopPrices();
+            });
+        });
+
+        elements.refreshPrices.addEventListener('click', () => this.loadTopPrices());
     }
 
-    async loadInitialData() {
-        elements.loadingOverlay.classList.remove('hidden');
-        
+    async testAPIs() {
+        const statusElement = elements.apiStatus.querySelector('.status-online');
         try {
-            // Simulate API calls with mock data
-            await this.loadMarketData();
-            await this.generateAnalysis();
-            
-            setTimeout(() => {
-                elements.loadingOverlay.classList.add('hidden');
-                this.logActivity('Market data loaded successfully. Analysis ready.');
-            }, 2000);
-            
+            // Test primary API
+            const response = await fetch(`${API_CONFIG.gecko.baseURL}/ping`);
+            if (response.ok) {
+                statusElement.textContent = 'All Systems Online';
+                statusElement.style.color = '#10b981';
+            }
         } catch (error) {
-            console.error('Error loading data:', error);
-            elements.loadingOverlay.classList.add('hidden');
-            this.logActivity('Error loading market data. Using simulated data.', 'error');
+            statusElement.textContent = 'Some APIs Offline - Using Fallbacks';
+            statusElement.style.color = '#f59e0b';
         }
     }
 
-    async loadMarketData() {
-        // Simulate API call to get market data
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                state.coinsData = this.generateMockMarketData();
-                resolve();
-            }, 1500);
-        });
+    async loadTopPrices() {
+        this.showLoading(true);
+        try {
+            switch(state.currentAPI) {
+                case 'gecko':
+                    await this.loadGeckoTopPrices();
+                    break;
+                case 'freecrypto':
+                    await this.loadFreeCryptoTopPrices();
+                    break;
+                case 'cmc':
+                    await this.loadCMCTopPrices();
+                    break;
+            }
+            this.generateMomentumSignals();
+        } catch (error) {
+            console.error('Error loading prices:', error);
+            this.fallbackToGecko();
+        } finally {
+            this.showLoading(false);
+        }
     }
 
-    generateMockMarketData() {
-        const coins = [];
-        const symbols = CONFIG.BITGET_COINS;
+    async loadGeckoTopPrices() {
+        const response = await fetch(
+            `${API_CONFIG.gecko.baseURL}${API_CONFIG.gecko.endpoints.top}?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&sparkline=false&price_change_percentage=24h`
+        );
         
-        symbols.forEach(symbol => {
-            const basePrice = this.getBasePrice(symbol);
-            const priceChange = (Math.random() - 0.5) * 20; // -10% to +10%
-            const currentPrice = basePrice * (1 + priceChange / 100);
-            const volume = basePrice * (1000000 + Math.random() * 5000000);
-            
-            coins.push({
-                symbol,
-                name: this.getCoinName(symbol),
-                price: currentPrice,
-                change24h: priceChange,
-                volume,
-                marketCap: basePrice * (10000000 + Math.random() * 50000000),
-                prediction: this.generatePrediction(symbol, currentPrice)
-            });
-        });
+        if (!response.ok) throw new Error('CoinGecko API failed');
         
-        return coins;
+        const coins = await response.json();
+        this.displayTopPrices(coins);
+        state.coinsData = coins;
     }
 
-    getBasePrice(symbol) {
-        const basePrices = {
-            'BTC': 45000, 'ETH': 3000, 'BNB': 600, 'SOL': 100, 'XRP': 0.6,
-            'ADA': 0.5, 'AVAX': 40, 'DOT': 7, 'LINK': 15, 'MATIC': 1,
-            'DOGE': 0.15, 'LTC': 70, 'ATOM': 10, 'ETC': 30, 'XLM': 0.12,
-            'FIL': 5, 'APT': 8, 'ARB': 1.5, 'NEAR': 3, 'OP': 2.5
-        };
-        return basePrices[symbol] || 10;
-    }
-
-    getCoinName(symbol) {
-        const names = {
-            'BTC': 'Bitcoin', 'ETH': 'Ethereum', 'BNB': 'Binance Coin', 
-            'SOL': 'Solana', 'XRP': 'Ripple', 'ADA': 'Cardano',
-            'AVAX': 'Avalanche', 'DOT': 'Polkadot', 'LINK': 'Chainlink',
-            'MATIC': 'Polygon', 'DOGE': 'Dogecoin', 'LTC': 'Litecoin',
-            'ATOM': 'Cosmos', 'ETC': 'Ethereum Classic', 'XLM': 'Stellar',
-            'FIL': 'Filecoin', 'APT': 'Aptos', 'ARB': 'Arbitrum',
-            'NEAR': 'Near Protocol', 'OP': 'Optimism'
-        };
-        return names[symbol] || symbol;
-    }
-
-    generatePrediction(symbol, currentPrice) {
-        const types = ['pump', 'dump', 'neutral'];
-        const type = types[Math.floor(Math.random() * 3)];
-        const confidence = Math.floor(Math.random() * 40) + 60; // 60-100%
-        const change = type === 'pump' ? 
-            (Math.random() * 15) + 10 : // 10-25% pump
-            type === 'dump' ? 
-            -(Math.random() * 15) - 10 : // -10 to -25% dump
-            (Math.random() * 4) - 2; // -2 to +2% neutral
+    async loadFreeCryptoTopPrices() {
+        const response = await fetch(
+            `${API_CONFIG.freecrypto.baseURL}${API_CONFIG.freecrypto.endpoints.getTop}`
+        );
         
-        return {
-            type,
-            confidence,
-            change,
-            timeframe: '10m',
-            risk: Math.floor(Math.random() * 30) + 10 // 10-40% risk
-        };
+        if (!response.ok) throw new Error('Free CryptoAPI failed');
+        
+        const data = await response.json();
+        // Transform data to match our display format
+        if (data.data) {
+            this.displayTopPrices(data.data.slice(0, 20));
+            state.coinsData = data.data;
+        }
     }
 
-    generateAnalysis() {
-        // Update statistics
-        elements.totalCoins.textContent = state.coinsData.length;
-        const activeSignals = state.coinsData.filter(coin => 
-            coin.prediction.confidence > 70 && coin.prediction.type !== 'neutral'
-        ).length;
-        elements.activeSignals.textContent = activeSignals;
-
-        // Update market sentiment
-        const pumps = state.coinsData.filter(coin => coin.prediction.type === 'pump').length;
-        const dumps = state.coinsData.filter(coin => coin.prediction.type === 'dump').length;
-        const sentiment = pumps > dumps ? 'BULLISH' : pumps < dumps ? 'BEARISH' : 'NEUTRAL';
-        elements.marketSentiment.textContent = sentiment;
-        elements.marketSentiment.className = `metric-value sentiment-${sentiment.toLowerCase()}`;
-
-        // Update top movers
-        this.updateTopMovers();
+    async loadCMCTopPrices() {
+        // Note: CMC requires an API key in headers
+        const response = await fetch(
+            `${API_CONFIG.cmc.baseURL}${API_CONFIG.cmc.endpoints.listings}?limit=20`,
+            {
+                headers: {
+                    'X-CMC_PRO_API_KEY': API_CONFIG.cmc.apiKey
+                }
+            }
+        );
         
-        // Update analysis grid
-        this.updateAnalysisGrid();
+        if (!response.ok) throw new Error('CoinMarketCap API failed');
         
-        // Update risk analysis
-        this.updateRiskAnalysis();
-        
-        // Update technical indicators
-        this.updateTechnicalIndicators();
+        const data = await response.json();
+        this.displayTopPrices(data.data);
+        state.coinsData = data.data;
     }
 
-    updateTopMovers() {
-        const topPumps = [...state.coinsData]
-            .filter(coin => coin.prediction.type === 'pump')
-            .sort((a, b) => b.prediction.confidence - a.prediction.confidence)
-            .slice(0, 5);
-
-        const topDumps = [...state.coinsData]
-            .filter(coin => coin.prediction.type === 'dump')
-            .sort((a, b) => b.prediction.confidence - a.prediction.confidence)
-            .slice(0, 5);
-
-        elements.topPumps.innerHTML = topPumps.map(coin => `
-            <div class="mover-item">
-                <img src="https://cryptologos.cc/logos/${coin.name.toLowerCase().replace(' ', '-')}-${coin.symbol.toLowerCase()}-logo.png" 
-                     alt="${coin.name}" class="mover-icon" onerror="this.src='https://via.placeholder.com/32'">
-                <div class="mover-info">
-                    <div class="mover-name">${coin.name}</div>
-                    <div class="mover-symbol">${coin.symbol}</div>
-                </div>
-                <div class="mover-price">$${coin.price.toFixed(2)}</div>
-                <div class="mover-change positive">+${coin.prediction.change.toFixed(1)}%</div>
-            </div>
-        `).join('');
-
-        elements.topDumps.innerHTML = topDumps.map(coin => `
-            <div class="mover-item">
-                <img src="https://cryptologos.cc/logos/${coin.name.toLowerCase().replace(' ', '-')}-${coin.symbol.toLowerCase()}-logo.png" 
-                     alt="${coin.name}" class="mover-icon" onerror="this.src='https://via.placeholder.com/32'">
-                <div class="mover-info">
-                    <div class="mover-name">${coin.name}</div>
-                    <div class="mover-symbol">${coin.symbol}</div>
-                </div>
-                <div class="mover-price">$${coin.price.toFixed(2)}</div>
-                <div class="mover-change negative">${coin.prediction.change.toFixed(1)}%</div>
-            </div>
-        `).join('');
-    }
-
-    updateAnalysisGrid() {
-        const highConfidenceCoins = state.coinsData
-            .filter(coin => coin.prediction.confidence > 70 && coin.prediction.type !== 'neutral')
-            .sort((a, b) => b.prediction.confidence - a.prediction.confidence);
-
-        elements.analysisGrid.innerHTML = highConfidenceCoins.map(coin => {
-            const prediction = coin.prediction;
-            const riskClass = prediction.risk < 20 ? 'low' : prediction.risk < 30 ? 'medium' : 'high';
+    displayTopPrices(coins) {
+        elements.pricesGrid.innerHTML = coins.map(coin => {
+            const price = coin.current_price || coin.price || coin.quote?.USD?.price;
+            const change = coin.price_change_percentage_24h || coin.percent_change_24h || coin.quote?.USD?.percent_change_24h;
+            const symbol = coin.symbol ? coin.symbol.toUpperCase() : '---';
             
             return `
-                <div class="analysis-card ${prediction.type}">
+                <div class="price-card" data-coin-id="${coin.id || coin.symbol}">
                     <div class="coin-header">
-                        <img src="https://cryptologos.cc/logos/${coin.name.toLowerCase().replace(' ', '-')}-${coin.symbol.toLowerCase()}-logo.png" 
-                             alt="${coin.name}" class="coin-icon" onerror="this.src='https://via.placeholder.com/40'">
-                        <div class="coin-info">
+                        <img src="${coin.image || 'https://via.placeholder.com/32'}" 
+                             alt="${coin.name}" class="coin-icon"
+                             onerror="this.src='https://via.placeholder.com/32'">
+                        <div>
                             <div class="coin-name">${coin.name}</div>
-                            <div class="coin-symbol">${coin.symbol}</div>
-                        </div>
-                        <div class="prediction-badge badge-${prediction.type}">
-                            ${prediction.type.toUpperCase()}
+                            <div class="coin-symbol">${symbol}</div>
                         </div>
                     </div>
-                    
-                    <div class="prediction-info">
-                        <div class="prediction-text">
-                            Predicted ${prediction.type} of <strong>${Math.abs(prediction.change).toFixed(1)}%</strong> in 10 minutes
-                        </div>
-                        <div class="confidence-meter">
-                            <div class="confidence-fill confidence-${prediction.confidence > 80 ? 'high' : prediction.confidence > 70 ? 'medium' : 'low'}" 
-                                 style="width: ${prediction.confidence}%"></div>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
-                            <span>Confidence: ${prediction.confidence}%</span>
-                            <span class="risk-${riskClass}">Risk: ${prediction.risk}%</span>
-                        </div>
-                    </div>
-                    
-                    <div class="trading-setup">
-                        <div class="setup-grid">
-                            <div class="setup-item">
-                                <div class="setup-label">Entry</div>
-                                <div class="setup-value">$${coin.price.toFixed(4)}</div>
-                            </div>
-                            <div class="setup-item">
-                                <div class="setup-label">TP</div>
-                                <div class="setup-value">$${(coin.price * (1 + Math.abs(prediction.change) / 100)).toFixed(4)}</div>
-                            </div>
-                            <div class="setup-item">
-                                <div class="setup-label">SL</div>
-                                <div class="setup-value">$${(coin.price * (1 - Math.abs(prediction.change) / 200)).toFixed(4)}</div>
-                            </div>
-                            <div class="setup-item">
-                                <div class="setup-label">Leverage</div>
-                                <div class="setup-value">10x</div>
-                            </div>
-                        </div>
+                    <div class="coin-price">$${typeof price === 'number' ? price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 6}) : 'N/A'}</div>
+                    <div class="coin-change ${change >= 0 ? 'change-positive' : 'change-negative'}">
+                        ${typeof change === 'number' ? change.toFixed(2) + '%' : 'N/A'}
                     </div>
                 </div>
             `;
         }).join('');
     }
 
-    updateRiskAnalysis() {
-        const totalRisk = state.coinsData.reduce((sum, coin) => sum + coin.prediction.risk, 0) / state.coinsData.length;
-        const marketRisk = Math.min(100, totalRisk * 1.5);
-        const volatilityRisk = Math.min(100, totalRisk * 0.8);
+    async searchCoin() {
+        const query = elements.searchInput.value.trim();
+        if (!query) return;
 
-        document.getElementById('marketRisk').style.width = `${marketRisk}%`;
-        document.getElementById('marketRiskValue').textContent = `${Math.round(marketRisk)}%`;
-        document.getElementById('volatilityRisk').style.width = `${volatilityRisk}%`;
-        document.getElementById('volatilityRiskValue').textContent = `${Math.round(volatilityRisk)}%`;
-
-        // Update risk meter colors
-        document.getElementById('marketRisk').className = `meter-fill ${marketRisk < 33 ? 'low' : marketRisk < 66 ? 'medium' : 'high'}`;
-        document.getElementById('volatilityRisk').className = `meter-fill ${volatilityRisk < 33 ? 'low' : volatilityRisk < 66 ? 'medium' : 'high'}`;
-    }
-
-    updateTechnicalIndicators() {
-        // Simulate technical indicator values
-        document.getElementById('rsiValue').textContent = Math.floor(Math.random() * 30) + 35;
-        document.getElementById('volumeValue').textContent = (Math.random() * 1000).toFixed(0) + 'M';
-        document.getElementById('emaValue').textContent = (Math.random() * 1000).toFixed(2);
-    }
-
-    initializeChart() {
-        const ctx = elements.priceChart.getContext('2d');
-        state.chart = new Chart(ctx, {
-            type: 'candlestick',
-            data: {
-                datasets: [{
-                    label: 'BTC/USDT',
-                    data: this.generateChartData(),
-                    color: {
-                        up: '#10b981',
-                        down: '#ef4444',
-                        unchanged: '#6b7280',
-                    }
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: {
-                            unit: 'minute'
-                        }
-                    },
-                    y: {
-                        position: 'right'
-                    }
-                }
-            }
-        });
-    }
-
-    generateChartData() {
-        const data = [];
-        let price = 45000;
-        const now = new Date();
-        
-        for (let i = 0; i < 50; i++) {
-            const time = new Date(now - (50 - i) * 60000);
-            const open = price;
-            const change = (Math.random() - 0.5) * 200;
-            const close = price + change;
-            const high = Math.max(open, close) + Math.random() * 100;
-            const low = Math.min(open, close) - Math.random() * 100;
-            
-            data.push({
-                x: time,
-                o: open,
-                h: high,
-                l: low,
-                c: close
-            });
-            
-            price = close;
-        }
-        
-        return data;
-    }
-
-    startBot() {
-        state.isBotRunning = true;
-        elements.startBot.classList.add('hidden');
-        elements.stopBot.classList.remove('hidden');
-        elements.botStatus.innerHTML = '<i class="fas fa-circle" style="color: #10b981"></i> Bot Running';
-        
-        this.logActivity('Trading bot started. Monitoring for 30%+ moves...');
-        
-        // Start analysis interval
-        state.analysisInterval = setInterval(() => {
-            this.updateMarketData();
-            this.checkForAlerts();
-        }, CONFIG.UPDATE_INTERVAL);
-        
-        elements.telegramStatus.textContent = 'Telegram: Active - Monitoring';
-    }
-
-    stopBot() {
-        state.isBotRunning = false;
-        elements.startBot.classList.remove('hidden');
-        elements.stopBot.classList.add('hidden');
-        elements.botStatus.innerHTML = '<i class="fas fa-circle" style="color: #ef4444"></i> Bot Stopped';
-        
-        if (state.analysisInterval) {
-            clearInterval(state.analysisInterval);
-            state.analysisInterval = null;
-        }
-        
-        this.logActivity('Trading bot stopped.');
-        elements.telegramStatus.textContent = 'Telegram: Ready';
-    }
-
-    updateMarketData() {
-        // Simulate market data updates
-        state.coinsData.forEach(coin => {
-            const change = (Math.random() - 0.5) * 4; // -2% to +2%
-            coin.price = coin.price * (1 + change / 100);
-            coin.prediction = this.generatePrediction(coin.symbol, coin.price);
-        });
-        
-        this.generateAnalysis();
-        this.updateChart();
-        
-        elements.marketStatus.textContent = `Last update: ${new Date().toLocaleTimeString()}`;
-    }
-
-    updateChart() {
-        if (state.chart) {
-            const newData = this.generateChartData();
-            state.chart.data.datasets[0].data = newData;
-            state.chart.update('none');
-        }
-    }
-
-    checkForAlerts() {
-        const strongMoves = state.coinsData.filter(coin => 
-            Math.abs(coin.prediction.change) >= 30 && 
-            coin.prediction.confidence >= 80 &&
-            !state.telegramAlerts.has(coin.symbol)
-        );
-
-        strongMoves.forEach(coin => {
-            this.sendTelegramAlert(coin);
-            state.telegramAlerts.add(coin.symbol);
-            
-            // Remove from alerts after 1 hour
-            setTimeout(() => {
-                state.telegramAlerts.delete(coin.symbol);
-            }, 3600000);
-        });
-    }
-
-    async sendTelegramAlert(coin) {
-        const message = this.formatTelegramMessage(coin);
-        this.logActivity(`Telegram Alert: ${coin.symbol} ${coin.prediction.type.toUpperCase()} signal detected`);
-        
-        // In a real implementation, you would send this to Telegram
-        console.log('Telegram Alert:', message);
-        
-        // Simulate API call
+        this.showLoading(true);
         try {
-            // await fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-            //     method: 'POST',
-            //     headers: { 'Content-Type': 'application/json' },
-            //     body: JSON.stringify({
-            //         chat_id: CONFIG.TELEGRAM_CHAT_ID,
-            //         text: message,
-            //         parse_mode: 'HTML'
-            //     })
-            // });
+            let coinData;
+            
+            switch(state.currentAPI) {
+                case 'gecko':
+                    coinData = await this.searchGeckoCoin(query);
+                    break;
+                case 'freecrypto':
+                    coinData = await this.searchFreeCryptoCoin(query);
+                    break;
+            }
+            
+            if (coinData) {
+                this.displayCoinAnalysis(coinData);
+            } else {
+                elements.coinDetails.innerHTML = '<p class="placeholder">Coin not found. Try a different name or symbol.</p>';
+            }
         } catch (error) {
-            console.error('Failed to send Telegram alert:', error);
+            console.error('Search error:', error);
+            elements.coinDetails.innerHTML = '<p class="placeholder">Search failed. Please try again.</p>';
+        } finally {
+            this.showLoading(false);
         }
     }
 
-    formatTelegramMessage(coin) {
-        const direction = coin.prediction.type === 'pump' ? '🚀 PUMP' : '📉 DUMP';
-        const change = Math.abs(coin.prediction.change);
+    async searchGeckoCoin(query) {
+        // First search for the coin
+        const searchResponse = await fetch(
+            `${API_CONFIG.gecko.baseURL}${API_CONFIG.gecko.endpoints.search}?query=${query}`
+        );
+        const searchData = await searchResponse.json();
         
-        return `
-<b>${direction} ALERT - ${coin.symbol}</b>
-
-💰 Current Price: $${coin.price.toFixed(4)}
-🎯 Predicted Move: ${change.toFixed(1)}% in 10 minutes
-📊 Confidence: ${coin.prediction.confidence}%
-⚠️ Risk Level: ${coin.prediction.risk}%
-
-<b>TRADING SETUP:</b>
-🎯 Entry: $${coin.price.toFixed(4)}
-✅ Take Profit: $${(coin.price * (1 + change / 100)).toFixed(4)}
-❌ Stop Loss: $${(coin.price * (1 - change / 200)).toFixed(4)}
-⚡ Leverage: 10x
-
-<code>RSI: ${Math.floor(Math.random() * 30) + 35} | VOL: ${(Math.random() * 1000).toFixed(0)}M</code>
-        `.trim();
+        if (!searchData.coins || searchData.coins.length === 0) return null;
+        
+        const coinId = searchData.coins[0].id;
+        
+        // Get detailed data
+        const detailResponse = await fetch(
+            `${API_CONFIG.gecko.baseURL}${API_CONFIG.gecko.endpoints.coin}${coinId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=true`
+        );
+        
+        return await detailResponse.json();
     }
 
-    refreshAnalysis() {
-        this.logActivity('Manual analysis refresh requested.');
-        this.updateMarketData();
-    }
+    displayCoinAnalysis(coinData) {
+        const marketData = coinData.market_data;
+        const currentPrice = marketData.current_price.usd;
+        const priceChange24h = marketData.price_change_percentage_24h;
+        const priceChange7d = marketData.price_change_percentage_7d;
+        
+        // Simple analysis logic
+        let analysis = '';
+        let recommendation = 'HOLD';
+        let confidence = 'Medium';
+        
+        if (priceChange24h > 10 && priceChange7d > 15) {
+            analysis = '🚀 Strong bullish momentum across multiple timeframes';
+            recommendation = 'CONSIDER BUYING';
+            confidence = 'High';
+        } else if (priceChange24h < -8 && priceChange7d < -12) {
+            analysis = '📉 Significant downward pressure, high risk';
+            recommendation = 'AVOID / SET STOP LOSS';
+            confidence = 'High';
+        } else if (Math.abs(priceChange24h) < 3) {
+            analysis = '↔️ Consolidating, waiting for breakout direction';
+            recommendation = 'HOLD / WAIT';
+            confidence = 'Medium';
+        } else {
+            analysis = '📊 Moderate volatility, monitor key levels';
+            recommendation = 'HOLD';
+            confidence = 'Medium';
+        }
 
-    updateTimeFrame(timeframe) {
-        this.logActivity(`Timeframe updated to: ${timeframe}`);
-        // In real implementation, this would affect the analysis
-    }
-
-    logActivity(message, type = 'info') {
-        const time = new Date().toLocaleTimeString();
-        const logEntry = document.createElement('div');
-        logEntry.className = 'log-entry';
-        logEntry.innerHTML = `
-            <span class="log-time">${time}</span>
-            <span class="log-message">${message}</span>
+        elements.coinDetails.innerHTML = `
+            <div class="analysis-item">
+                <h4>${coinData.name} (${coinData.symbol.toUpperCase()}) Analysis</h4>
+                <p><strong>Current Price:</strong> $${currentPrice.toLocaleString()}</p>
+                <p><strong>24h Change:</strong> <span class="${priceChange24h >= 0 ? 'change-positive' : 'change-negative'}">${priceChange24h.toFixed(2)}%</span></p>
+                <p><strong>7d Change:</strong> <span class="${priceChange7d >= 0 ? 'change-positive' : 'change-negative'}">${priceChange7d.toFixed(2)}%</span></p>
+            </div>
+            <div class="analysis-item">
+                <h4>Market Analysis</h4>
+                <p>${analysis}</p>
+                <p><strong>Recommendation:</strong> ${recommendation}</p>
+                <p><strong>Confidence:</strong> ${confidence}</p>
+            </div>
+            <div class="analysis-item">
+                <h4>Key Levels</h4>
+                <p><strong>Entry Zone:</strong> $${(currentPrice * 0.98).toLocaleString()} - $${(currentPrice * 1.02).toLocaleString()}</p>
+                <p><strong>Take Profit:</strong> $${(currentPrice * 1.08).toLocaleString()} (+8%)</p>
+                <p><strong>Stop Loss:</strong> $${(currentPrice * 0.94).toLocaleString()} (-6%)</p>
+            </div>
         `;
-        
-        elements.activityLog.prepend(logEntry);
-        
-        // Keep only last 50 entries
-        const entries = elements.activityLog.querySelectorAll('.log-entry');
-        if (entries.length > 50) {
-            entries[entries.length - 1].remove();
-        }
+    }
+
+    generateMomentumSignals() {
+        if (!state.coinsData.length) return;
+
+        // Simple momentum calculation based on 24h price change
+        const signals = state.coinsData
+            .filter(coin => {
+                const change = coin.price_change_percentage_24h || coin.percent_change_24h || 0;
+                return Math.abs(change) > 5; // Only show coins with significant movement
+            })
+            .sort((a, b) => {
+                const changeA = a.price_change_percentage_24h || a.percent_change_24h || 0;
+                const changeB = b.price_change_percentage_24h || b.percent_change_24h || 0;
+                return Math.abs(changeB) - Math.abs(changeA);
+            })
+            .slice(0, 5);
+
+        elements.momentumSignals.innerHTML = signals.map(coin => {
+            const change = coin.price_change_percentage_24h || coin.percent_change_24h || 0;
+            const signalType = change > 0 ? 'signal-buy' : 'signal-sell';
+            const signalText = change > 0 ? 'STRONG MOMENTUM' : 'WEAK MOMENTUM';
+            
+            return `
+                <div class="signal-item ${signalType}">
+                    <div>
+                        <strong>${coin.symbol ? coin.symbol.toUpperCase() : '---'}</strong>
+                        <div>${coin.name}</div>
+                    </div>
+                    <div>
+                        <div class="${change >= 0 ? 'change-positive' : 'change-negative'}">${change.toFixed(2)}%</div>
+                        <div class="signal-type">${signalText}</div>
+                    </div>
+                </div>
+            `;
+        }).join('') || '<p class="placeholder">No strong momentum signals detected in the last 15 minutes.</p>';
+    }
+
+    async fallbackToGecko() {
+        console.log('Falling back to CoinGecko API');
+        state.currentAPI = 'gecko';
+        document.querySelector('input[value="gecko"]').checked = true;
+        await this.loadGeckoTopPrices();
+    }
+
+    startAutoRefresh() {
+        // Refresh data every 30 seconds
+        state.updateInterval = setInterval(() => {
+            this.loadTopPrices();
+        }, 30000);
+    }
+
+    showLoading(show) {
+        elements.loading.classList.toggle('hidden', !show);
     }
 }
 
-// Initialize the application when DOM is loaded
+// Initialize the application when the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new CryptoTrader();
+    new CryptoDashboard();
 });
-
-// Utility function for risk colors
-const riskColors = {
-    low: '#10b981',
-    medium: '#f59e0b',
-    high: '#ef4444'
-};
