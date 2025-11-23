@@ -3,269 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bitget Futures AI Trader</title>
+    <title>CryptoWatch Pro - Live Market Dashboard</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <header class="header">
-            <div class="header-content">
-                <h1><i class="fas fa-chart-line"></i> Bitget Futures AI Trader</h1>
-                <p>Advanced AI-Powered Futures Trading Analysis & Alerts</p>
-            </div>
-            <div class="header-stats">
-                <div class="live-indicator">
-                    <span class="pulse"></span>
-                    LIVE
-                </div>
-                <div class="market-status">
-                    <span id="marketStatus">Loading...</span>
-                </div>
+            <h1><i class="fas fa-chart-line"></i> CryptoWatch Pro</h1>
+            <p>Live cryptocurrency prices, analysis, and trading signals</p>
+            <div class="api-status">
+                <span id="apiStatus">API Status: <span class="status-online">Checking...</span></span>
             </div>
         </header>
 
-        <!-- Control Panel -->
-        <div class="control-panel">
-            <div class="panel-section">
-                <button id="startBot" class="btn btn-success">
-                    <i class="fas fa-play"></i> START TRADING BOT
-                </button>
-                <button id="stopBot" class="btn btn-danger hidden">
-                    <i class="fas fa-stop"></i> STOP BOT
-                </button>
-                <div class="bot-status" id="botStatus">
-                    <i class="fas fa-circle"></i> Bot Stopped
-                </div>
+        <div class="search-section">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search for a coin (e.g., bitcoin, ethereum, solana)...">
+                <button id="searchBtn"><i class="fas fa-search"></i> Find Coin</button>
             </div>
-            
-            <div class="panel-section">
-                <div class="telegram-status">
-                    <i class="fab fa-telegram"></i>
-                    <span id="telegramStatus">Telegram: Ready</span>
-                </div>
+            <div class="search-options">
+                <label><input type="radio" name="searchType" value="gecko" checked> CoinGecko</label>
+                <label><input type="radio" name="searchType" value="freecrypto"> Free CryptoAPI</label>
+                <label><input type="radio" name="searchType" value="cmc"> CoinMarketCap</label>
             </div>
         </div>
 
-        <!-- Main Dashboard -->
         <div class="dashboard">
-            <!-- Left Column -->
-            <div class="left-column">
-                <!-- Market Overview -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-globe"></i> Market Overview</h3>
-                        <div class="time-filter">
-                            <select id="timeFrame">
-                                <option value="10m">10 Min Prediction</option>
-                                <option value="30m">30 Min Prediction</option>
-                                <option value="1h">1 Hour Prediction</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="market-metrics">
-                            <div class="metric">
-                                <span class="metric-label">Total Coins</span>
-                                <span class="metric-value" id="totalCoins">0</span>
-                            </div>
-                            <div class="metric">
-                                <span class="metric-label">Active Signals</span>
-                                <span class="metric-value" id="activeSignals">0</span>
-                            </div>
-                            <div class="metric">
-                                <span class="metric-label">Market Sentiment</span>
-                                <span class="metric-value sentiment-bullish" id="marketSentiment">NEUTRAL</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Top Movers -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-fire"></i> Top 5 Pump Coins</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="movers-list" id="topPumps">
-                            <!-- Top pumps will be populated here -->
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-bomb"></i> Top 5 Dump Coins</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="movers-list" id="topDumps">
-                            <!-- Top dumps will be populated here -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Center Column -->
-            <div class="center-column">
-                <!-- Trading Analysis -->
-                <div class="card large-card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-robot"></i> AI Trading Analysis</h3>
-                        <div class="analysis-controls">
-                            <button class="btn btn-outline" id="refreshAnalysis">
-                                <i class="fas fa-sync-alt"></i> Refresh
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="analysis-grid" id="analysisGrid">
-                            <!-- Analysis cards will be populated here -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Risk Analysis -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-exclamation-triangle"></i> Risk Analysis</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="risk-meters">
-                            <div class="risk-meter">
-                                <div class="risk-label">Market Risk</div>
-                                <div class="meter">
-                                    <div class="meter-fill" id="marketRisk" style="width: 50%;"></div>
-                                </div>
-                                <div class="risk-value" id="marketRiskValue">50%</div>
-                            </div>
-                            <div class="risk-meter">
-                                <div class="risk-label">Volatility Risk</div>
-                                <div class="meter">
-                                    <div class="meter-fill" id="volatilityRisk" style="width: 30%;"></div>
-                                </div>
-                                <div class="risk-value" id="volatilityRiskValue">30%</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Column -->
-            <div class="right-column">
-                <!-- Trading Setup -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-cog"></i> Trading Setup</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="setup-form">
-                            <div class="form-group">
-                                <label>Entry Price ($)</label>
-                                <input type="number" id="entryPrice" placeholder="0.00" step="0.0001">
-                            </div>
-                            <div class="form-group">
-                                <label>Take Profit ($)</label>
-                                <input type="number" id="takeProfit" placeholder="0.00" step="0.0001">
-                            </div>
-                            <div class="form-group">
-                                <label>Stop Loss ($)</label>
-                                <input type="number" id="stopLoss" placeholder="0.00" step="0.0001">
-                            </div>
-                            <div class="form-group">
-                                <label>Leverage</label>
-                                <select id="leverage">
-                                    <option value="5">5x</option>
-                                    <option value="10" selected>10x</option>
-                                    <option value="20">20x</option>
-                                    <option value="50">50x</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Risk Level</label>
-                                <select id="riskLevel">
-                                    <option value="low">Low (5%)</option>
-                                    <option value="medium" selected>Medium (10%)</option>
-                                    <option value="high">High (15%)</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Technical Indicators -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-chart-bar"></i> Technical Indicators</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="indicators">
-                            <div class="indicator">
-                                <span class="indicator-label">RSI</span>
-                                <span class="indicator-value" id="rsiValue">50</span>
-                            </div>
-                            <div class="indicator">
-                                <span class="indicator-label">Volume</span>
-                                <span class="indicator-value" id="volumeValue">0</span>
-                            </div>
-                            <div class="indicator">
-                                <span class="indicator-label">EMA 20</span>
-                                <span class="indicator-value" id="emaValue">0</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Charts Section -->
-        <div class="charts-section">
-            <div class="card full-width">
+            <!-- Live Prices Section -->
+            <div class="card">
                 <div class="card-header">
-                    <h3><i class="fas fa-chart-candlestick"></i> Price Chart & Analysis</h3>
-                    <div class="chart-controls">
-                        <select id="chartTimeframe">
-                            <option value="1m">1 Minute</option>
-                            <option value="5m">5 Minutes</option>
-                            <option value="15m" selected>15 Minutes</option>
-                            <option value="1h">1 Hour</option>
-                        </select>
-                    </div>
+                    <h3><i class="fas fa-coins"></i> Top Live Prices</h3>
+                    <button id="refreshPrices"><i class="fas fa-sync-alt"></i> Refresh</button>
                 </div>
                 <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="priceChart"></canvas>
+                    <div class="prices-grid" id="pricesGrid">
+                        <!-- Prices will be loaded here -->
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Activity Log -->
-        <div class="activity-section">
-            <div class="card full-width">
+            <!-- Coin Details & Analysis -->
+            <div class="card">
                 <div class="card-header">
-                    <h3><i class="fas fa-list"></i> Trading Activity & Telegram Log</h3>
+                    <h3><i class="fas fa-chart-bar"></i> Coin Analysis</h3>
                 </div>
                 <div class="card-body">
-                    <div class="activity-log" id="activityLog">
-                        <div class="log-entry">
-                            <span class="log-time">12:00:00</span>
-                            <span class="log-message">System initialized. Ready to start trading.</span>
-                        </div>
+                    <div id="coinDetails">
+                        <p class="placeholder">Search for a coin to see detailed analysis and trading signals.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trading Signals -->
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-bolt"></i> 15-Minute Momentum Signals</h3>
+                </div>
+                <div class="card-body">
+                    <div id="momentumSignals">
+                        <p class="placeholder">Loading momentum analysis...</p>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Loading Overlay -->
-    <div class="loading-overlay hidden" id="loadingOverlay">
-        <div class="loading-content">
+        <div class="loading hidden" id="loading">
             <i class="fas fa-spinner fa-spin"></i>
-            <h3>Loading Market Data...</h3>
-            <p>Analyzing 100+ cryptocurrencies for trading opportunities</p>
+            <span>Fetching live market data...</span>
         </div>
+
+        <footer class="footer">
+            <p>Powered by CoinGecko API, Free CryptoAPI, and CoinMarketCap API | Data updates every 30 seconds</p>
+        </footer>
     </div>
 
     <script src="script.js"></script>
