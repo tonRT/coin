@@ -3,79 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CryptoWatch Pro - Live Market Dashboard</title>
+    <title>Crypto Pump & Dump Analyst</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <header class="header">
-            <h1><i class="fas fa-chart-line"></i> CryptoWatch Pro</h1>
-            <p>Live cryptocurrency prices, analysis, and trading signals</p>
-            <div class="api-status">
-                <span id="apiStatus">API Status: <span class="status-online">Checking...</span></span>
-            </div>
+        <header>
+            <h1>🚀 Crypto Pump & Dump Analyst</h1>
+            <p>Live Bitget-style analysis with AI-powered signals</p>
         </header>
 
-        <div class="search-section">
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Search for a coin (e.g., bitcoin, ethereum, solana)...">
-                <button id="searchBtn"><i class="fas fa-search"></i> Find Coin</button>
-            </div>
-            <div class="search-options">
-                <label><input type="radio" name="searchType" value="gecko" checked> CoinGecko</label>
-                <label><input type="radio" name="searchType" value="freecrypto"> Free CryptoAPI</label>
-                <label><input type="radio" name="searchType" value="cmc"> CoinMarketCap</label>
-            </div>
+        <div class="controls">
+            <button id="refreshData">🔄 Refresh Market Data</button>
+            <div class="api-status">API: <span id="apiStatus">Loading...</span></div>
         </div>
 
         <div class="dashboard">
-            <!-- Live Prices Section -->
+            <!-- Top Pump Coins -->
             <div class="card">
                 <div class="card-header">
-                    <h3><i class="fas fa-coins"></i> Top Live Prices</h3>
-                    <button id="refreshPrices"><i class="fas fa-sync-alt"></i> Refresh</button>
+                    <h2>📈 Top 5 Pump Coins (Last 2 Hours)</h2>
+                    <span class="badge">LIVE</span>
                 </div>
                 <div class="card-body">
-                    <div class="prices-grid" id="pricesGrid">
-                        <!-- Prices will be loaded here -->
+                    <div id="pumpCoins" class="coins-list">
+                        <div class="loading">Loading pump data...</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Coin Details & Analysis -->
+            <!-- Top Dump Coins -->
             <div class="card">
                 <div class="card-header">
-                    <h3><i class="fas fa-chart-bar"></i> Coin Analysis</h3>
+                    <h2>📉 Top 5 Dump Coins (Last 2 Hours)</h2>
+                    <span class="badge">LIVE</span>
                 </div>
                 <div class="card-body">
-                    <div id="coinDetails">
-                        <p class="placeholder">Search for a coin to see detailed analysis and trading signals.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Trading Signals -->
-            <div class="card">
-                <div class="card-header">
-                    <h3><i class="fas fa-bolt"></i> 15-Minute Momentum Signals</h3>
-                </div>
-                <div class="card-body">
-                    <div id="momentumSignals">
-                        <p class="placeholder">Loading momentum analysis...</p>
+                    <div id="dumpCoins" class="coins-list">
+                        <div class="loading">Loading dump data...</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="loading hidden" id="loading">
-            <i class="fas fa-spinner fa-spin"></i>
-            <span>Fetching live market data...</span>
+        <!-- Trading Analysis -->
+        <div class="card analysis-card">
+            <div class="card-header">
+                <h2>🤖 AI Trading Analysis & Auto Entry</h2>
+                <span class="badge">20% RISK</span>
+            </div>
+            <div class="card-body">
+                <div id="tradingAnalysis">
+                    <div class="analysis-placeholder">
+                        <p>Market analysis will appear here after loading data...</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <footer class="footer">
-            <p>Powered by CoinGecko API, Free CryptoAPI, and CoinMarketCap API | Data updates every 30 seconds</p>
-        </footer>
+        <!-- Market Stats -->
+        <div class="market-stats">
+            <div class="stat">
+                <span class="label">Last Updated:</span>
+                <span id="lastUpdated">-</span>
+            </div>
+            <div class="stat">
+                <span class="label">Coins Tracked:</span>
+                <span id="coinsTracked">0</span>
+            </div>
+            <div class="stat">
+                <span class="label">Market Sentiment:</span>
+                <span id="marketSentiment">-</span>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>
