@@ -9,7 +9,7 @@
     --success: #10b981;
     --danger: #ef4444;
     --warning: #f59e0b;
-    --dark: #1f2937;
+    --dark: #0f172a;
     --light: #f8fafc;
     --gray: #6b7280;
 }
@@ -300,6 +300,10 @@ body {
     background: linear-gradient(45deg, #f59e0b, #ef4444);
 }
 
+.coin-card.dump::before {
+    background: linear-gradient(45deg, #ef4444, #8b5cf6);
+}
+
 .coin-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
@@ -433,6 +437,30 @@ body {
 
 .pump-badge {
     background: linear-gradient(45deg, #f59e0b, #ef4444);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.dump-badge {
+    background: linear-gradient(45deg, #ef4444, #8b5cf6);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.time-badge {
+    background: var(--primary);
     color: white;
     padding: 4px 12px;
     border-radius: 20px;
